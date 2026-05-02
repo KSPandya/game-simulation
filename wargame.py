@@ -1,9 +1,4 @@
-"""
-╔══════════════════════════════════════════════════════════════╗
-║   SPACECOM WARGAMING COMMAND DASHBOARD — Streamlit App       ║
-║   Run: streamlit run app.py                                  ║
-╚══════════════════════════════════════════════════════════════╝
-"""
+
 
 import streamlit as st
 import plotly.graph_objects as go
@@ -14,7 +9,7 @@ import math
 import random
 from datetime import datetime, timedelta
 
-# ─── PAGE CONFIG ────────────────────────────────────────────────
+
 st.set_page_config(
     page_title="SPACECOM | WARGAME OPS",
     page_icon="🛰",
@@ -22,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ─── GLOBAL CSS ─────────────────────────────────────────────────
+
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
@@ -83,7 +78,7 @@ html, body, [data-testid="stAppViewContainer"] { background: #0A0F1C !important;
 </style>
 """, unsafe_allow_html=True)
 
-# ─── SESSION STATE INIT ──────────────────────────────────────────
+
 def init_state():
     defaults = {
         "sim_running": False,
@@ -108,7 +103,7 @@ def init_state():
 
 init_state()
 
-# ─── TURN-BASED OODA LOOP EXECUTION ─────────────────────────────
+
 def advance_simulation(multiplier=1.0):
     st.session_state.sim_time += (60 * multiplier) 
     st.session_state.tick += 1
@@ -133,7 +128,7 @@ def advance_simulation(multiplier=1.0):
             
         st.session_state.intel_log.insert(0, (curr_epoch, msg[0], msg[1]))
 
-# ─── PHYSICS / ORBITAL MATH ─────────────────────────────────────
+
 def orbital_pos(semi_major, inc, raan, phase, t, speed_mult=1.0):
     omega = speed_mult / (semi_major ** 1.5)
     angle = phase + omega * t
@@ -168,7 +163,7 @@ ESCALATION_EVENTS = [
     (0.75, "COA EXEC",       "active",      "#56CCF2"), (1.00, "RESOLUTION",     "nominal",     "#27AE60"),
 ]
 
-# ─── ORBITAL 3D FIGURE WITH DYNAMIC ANIMATIONS ──────────────────
+
 def build_orbital_figure(t, scenario, speed, horizon):
     fig = go.Figure()
     horizon_s = horizon * 3600
@@ -194,11 +189,9 @@ def build_orbital_figure(t, scenario, speed, horizon):
         sym = 'diamond' if sat['type'] == 'debris' else 'square'
         fig.add_trace(go.Scatter3d(x=[px], y=[py], z=[pz], mode='markers+text', marker=dict(size=sat['size']+2, color=sat['color'], symbol=sym, line=dict(color='#FFFFFF', width=1.5), opacity=1.0), text=[sat['id']], textposition='top center', textfont=dict(color='#FFFFFF', size=13, family='Share Tech Mono', weight='bold'), name=sat['id'], showlegend=True))
 
-    # ==========================================
-    # DYNAMIC ANIMATION LAYERS
-    # ==========================================
+
     
-    # 1. LIVE RADAR SWEEP (Pulsing from USA-316)
+
     sweep_phase = (t % 1200) / 1200.0  # Loops visually based on time
     sweep_r = 0.1 + (sweep_phase * 0.7)
     sweep_op = max(0, 0.4 - (sweep_phase * 0.4))
@@ -210,7 +203,7 @@ def build_orbital_figure(t, scenario, speed, horizon):
         showscale=False, opacity=sweep_op, hoverinfo='skip', showlegend=False, name="Radar Sweep"
     ))
 
-    # 2. ASAT MISSILE LAUNCH & TRACKING (0.55 to 0.85)
+    
     if 0.55 <= prog <= 0.85:
         t_launch = horizon_s * 0.55
         t_intercept = horizon_s * 0.85
@@ -221,13 +214,12 @@ def build_orbital_figure(t, scenario, speed, horizon):
         mx = kx + (target_x - kx) * m_prog
         my = ky + (target_y - ky) * m_prog
         mz = kz + (target_z - kz) * m_prog
-        
-        # Missile Marker
+
         fig.add_trace(go.Scatter3d(x=[mx], y=[my], z=[mz], mode='markers', marker=dict(size=8, color='#FF2020', symbol='x', line=dict(color='white', width=1)), name='ASAT KKV'))
-        # Targeting Laser Line
+    
         fig.add_trace(go.Scatter3d(x=[kx, mx], y=[ky, my], z=[kz, mz], mode='lines', line=dict(color='rgba(255,32,32,0.8)', width=3, dash='dot'), showlegend=False))
 
-    # 3. EVASIVE BURN THRUST (0.75 to 0.86)
+
     if 0.75 <= prog <= 0.86:
         # Glow aura around USA-316
         fig.add_trace(go.Scatter3d(
@@ -244,7 +236,6 @@ def build_orbital_figure(t, scenario, speed, horizon):
     )
     return fig
 
-# ─── COA RADAR CHART ────────────────────────────────────────────
 def build_radar():
     cats = ['SUCCESS', 'RISK↓', 'COST EFF.', 'SPEED', 'STABILITY', 'SUCCESS']
     fig = go.Figure()
@@ -257,7 +248,7 @@ def build_radar():
     )
     return fig
 
-# ─── SENSITIVITY CHART ──────────────────────────────────────────
+
 def build_sensitivity(uncert):
     u = uncert / 100.0
     coa_data_s = [('COA-α', 0.91, '#27AE60'), ('COA-β', 0.74, '#F2994A'), ('COA-χ', 0.34, '#EB5757')]
@@ -274,7 +265,6 @@ def build_sensitivity(uncert):
     )
     return fig
 
-# ─── TIMELINE / TREND CHART ─────────────────────────────────────
 def build_escalation_trend(sim_t, horizon_h):
     x = np.linspace(0, horizon_h, 200)
     y = 0.1 + 0.7 * np.exp(-((x - horizon_h * 0.6) ** 2) / (2 * (horizon_h * 0.15) ** 2)); y += 0.05 * np.sin(x * 3); y = np.clip(y, 0, 1)
@@ -299,7 +289,7 @@ def build_escalation_trend(sim_t, horizon_h):
     )
     return fig
 
-# ─── RISK BAR CHART ─────────────────────────────────────────────
+
 def build_risk_bars():
     coas = ['COA-ALPHA', 'COA-BRAVO', 'COA-CHARLIE']; risks  = [13, 29, 88]; costs  = [22, 58, 0]; colors = ['#27AE60', '#F2994A', '#EB5757']
     fig = go.Figure()
@@ -310,14 +300,12 @@ def build_risk_bars():
     )
     return fig
 
-# ─── HELPER: progress bar HTML ──────────────────────────────────
+
 def pbar_html(val, color, max_val=100):
     pct = val / max_val * 100
     return f"""<div class='pbar-wrap'><div class='pbar' style='width:{pct}%;background:{color}'></div></div>"""
 
-# ═══════════════════════════════════════════════════════════════
-#                         MAIN RENDER
-# ═══════════════════════════════════════════════════════════════
+
 
 t_now = datetime.utcnow() + timedelta(days=27 * 365.25)   # 2047
 sim_s = st.session_state.sim_time
@@ -345,7 +333,6 @@ st.markdown(f"""
 
 col_left, col_center, col_right = st.columns([1.2, 2.6, 1.4])
 
-# ════════════════════════ LEFT PANEL ════════════════════════════
 with col_left:
     st.markdown("<div class='panel-title'>◈ SCENARIO CONTROL</div>", unsafe_allow_html=True)
 
@@ -400,7 +387,7 @@ with col_left:
     intel_html += "</div>"
     st.markdown(intel_html, unsafe_allow_html=True)
 
-# ════════════════════════ CENTER PANEL ══════════════════════════
+
 with col_center:
     st.markdown("<div class='panel-title' style='font-size:16px;'>◈ ECI ORBITAL SIMULATION — LEO THEATRE | ALT: 550km | INC: 53°</div>", unsafe_allow_html=True)
 
@@ -413,7 +400,7 @@ with col_center:
     fig_orb = build_orbital_figure(st.session_state.sim_time, st.session_state.scenario, st.session_state.sim_speed, st.session_state.time_horizon)
     st.plotly_chart(fig_orb, use_container_width=True, key=f"orbital_{st.session_state.tick}")
 
-# ════════════════════════ RIGHT PANEL ═══════════════════════════
+
 with col_right:
     st.markdown("<div class='panel-title'>◈ COA DECISION MATRIX</div>", unsafe_allow_html=True)
 
@@ -455,7 +442,7 @@ with col_right:
         st.plotly_chart(build_sensitivity(uncert), use_container_width=True, key="sens")
         st.markdown(f"""<div style='font-family:Share Tech Mono,monospace;font-size:12px;color:#FFFFFF;text-align:center;font-weight:bold;'>COA-ALPHA optimal across ±{uncert}% uncertainty band</div>""", unsafe_allow_html=True)
 
-# ════════════════════════ BOTTOM PANEL — TIMELINE ═══════════════
+
 st.markdown("---", unsafe_allow_html=True)
 st.markdown("<div class='panel-title'>◈ ESCALATION LADDER & TEMPORAL EVOLUTION</div>", unsafe_allow_html=True)
 
@@ -483,9 +470,9 @@ with b2:
     </div>""", unsafe_allow_html=True)
 
 
-# ─── AUTO-PLAY LOOP EXECUTION ───────────────────────────────────
+
 if st.session_state.sim_running:
-    # Advance time automatically and rerun safely
+  
     advance_simulation(4.0)
-    time.sleep(0.5)  # 2 FPS throttle to prevent crashing Streamlit
+    time.sleep(0.5) 
     st.rerun()
